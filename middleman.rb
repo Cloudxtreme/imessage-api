@@ -13,11 +13,8 @@ module Messages
 
     # Method takes care of starting the work queue.
     def start
-      addresses = @startup_socket.recv
-      @startup_socket.close
       @job_socket = @ctx.bind(:PUSH, "tcp://*:#{JOB_PORT}")
       work_loop
-      JSON.parse(addresses).to_set
     end
 
     # Method takes care of stopping the work queue.

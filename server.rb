@@ -11,26 +11,30 @@ module Messages
     set :static, true
     set :public_folder, File.join($ROOT, 'attachments')
 
-    # "Globals" for the server.
-    @redis = Redis.new(host: REDIS_HOST, port: REDIS_PORT)
-    @middleman = MiddleMan.new
-    @middleman.start
+    configure do
+      set :redis, Redis.new(host: REDIS_HOST, port: REDIS_PORT)
+
+      middleman = MiddleMan.new
+      middleman.start
+      set :middleman, middleman
+    end
 
     # Routes.
 
     get '/get_token' do
+      byebug
       begin
         # Verify parameters.
         raise UnauthorizedError, 'Credentials not provided.' unless params['user'].exists? && params['pass'].exists?
-        raise UnauthorizedError, 'Specified user does not exist.' unless @redis.exists("messages.users.#{params['user']}")
+        raise UnauthorizedError, 'Specified user does not exist.' unless settings.redis.exists("messages.users.#{params['user']}")
 
         # Check password
-        crypted_pass = @redis.hget("messages.users.#{params['user']}", 'pass')
+        crypted_pass = settings.redis.get("messages.users.#{params['user']}")
         raise UnauthorizedError, 'Password is incorrect.' unless crypted_pass == params['pass']
 
         # Everything checks out. Return access token.
         token = SecureRandom.hex(16)
-        @redis.sadd('messages.tokens', token)
+        settings.redis.sadd('messages.tokens', token)
         {
           code: 'success',
           body: token
@@ -51,6 +55,7 @@ module Messages
     end
 
     get '/send_message' do
+      byebug
       begin
         # Get endpoint doesn't accept attachments, so make sure none were sent.
         raise BadRequestError, 'This endpoint does not accept attachments. Please use POST.' if params['attachment'].exists?
@@ -78,6 +83,7 @@ module Messages
     end
 
     post '/send_message' do
+      byebug
       begin
         # Internal method only exists to allow the get endpoint to enforce some special logic,
         # so just go ahead and actually do the work.
@@ -106,7 +112,7 @@ module Messages
     # Gets called by both get and post handlers for /send_message route.
     def internal_send_message(to, message, attachment, token)
       raise UnauthorizedError, 'Token not provided.' unless token.exists?
-      raise UnauthorizedError, 'Provided token is invalid.' unless @redis.sismember('messages.tokens', token)
+      raise UnauthorizedError, 'Provided token is invalid.' unless settings.redis.sismember('messages.tokens', token)
       raise BadRequestError, 'Missing recipient.' unless to.exists?
 
       # Validate arguments.
@@ -122,14 +128,14 @@ module Messages
       # Parse out information about the attachment to send downstream.
       if attachment
         file = attachment[:tempfile]
-        ext = attachment[:name][attachment[:name].rindex('.')..-1]
+        ext = attachment[:filename][attachment[:filename].rindex('.')..-1]
         nonce = SecureRandom.hex(16)
         file.persist(File.join($ROOT, 'attachments', nonce) + ext)
         message[:attachment] = "attachments/#{nonce}#{ext}"
       end
 
       # Enqueue the message for the MiddleMan.
-      @middleman.add_job(message)
+      settings.middleman.add_job(message)
 
       # Return success message.
       {

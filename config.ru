@@ -3,6 +3,7 @@ $:.unshift($ROOT)
 
 # System Requirements
 require 'yaml'
+require 'json'
 require 'thread'
 require 'securerandom'
 require 'set'
@@ -10,13 +11,10 @@ require 'fileutils'
 
 # Gem Requirements
 require 'sinatra'
-require 'puma'
+require 'thin'
 require 'rbczmq'
 require 'redis'
 require 'byebug'
-
-# Local Requirements
-require 'helpers'
 
 Thread.abort_on_exception = true
 
@@ -29,8 +27,11 @@ module Messages
   REDIS_PORT = CONFIG['redis_port']
 end
 
-Dir.mkdir(File.join($ROOT, 'attachments'))
+FileUtils.mkdir_p(File.join($ROOT, 'attachments'))
 
+# Local Requirements
+require 'helpers'
+require 'middleman'
 require 'server'
 
 run Messages::Server
