@@ -8,8 +8,6 @@ module Messages
 
     # Server configuration.
 
-    set :port, SERVER_PORT
-    set :bind, SERVER_BIND
     set :static, true
     set :public_folder, File.join($ROOT, 'attachments')
 

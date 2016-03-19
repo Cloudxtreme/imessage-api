@@ -24,10 +24,7 @@ Thread.abort_on_exception = true
 
 module Messages
   CONFIG = YAML::load_file(File.join($ROOT, 'messages.yml'))
-  SERVER_PORT = CONFIG['server_port']
-  SERVER_BIND = CONFIG['server_bind']
-  ZMQ_STARTUP_PORT = CONFIG['zmq_startup_port']
-  ZMQ_JOB_PORT = CONFIG['zmq_job_port']
+  JOB_PORT = CONFIG['job_port']
   REDIS_HOST = CONFIG['redis_host']
   REDIS_PORT = CONFIG['redis_port']
 end

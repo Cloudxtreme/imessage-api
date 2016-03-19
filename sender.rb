@@ -19,7 +19,7 @@ ctx = ZMQ::Context.new
 config = YAML::load_file(File.join($ROOT, 'messages.yml'))
 host = config['server_hostname']
 prefix = config['server_prefix']
-job_port = config['zmq_job_port']
+job_port = config['job_port']
 
 job_socket = ctx.connect("tcp://#{host}:#{job_port}")
 loop do

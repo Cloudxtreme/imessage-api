@@ -13,10 +13,9 @@ module Messages
 
     # Method takes care of starting the work queue.
     def start
-      @startup_socket = @ctx.bind(:PULL, "tcp://*:#{ZMQ_STARTUP_PORT}")
       addresses = @startup_socket.recv
       @startup_socket.close
-      @job_socket = @ctx.bind(:PUSH, "tcp://*:#{ZMQ_JOB_PORT}")
+      @job_socket = @ctx.bind(:PUSH, "tcp://*:#{JOB_PORT}")
       work_loop
       JSON.parse(addresses).to_set
     end
