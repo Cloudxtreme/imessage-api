@@ -42,10 +42,7 @@ module Messages
     def work_loop
       @worker = Thread.new do
         loop do
-          if Thread.current[:should_halt]
-            socket.send('bye!')
-            break
-          end
+          break if Thread.current[:should_halt]
 
           # Block until we receive a job. Stop method pushes nil into the
           # queue, so we need to make sure that the job actually exists.

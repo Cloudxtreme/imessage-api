@@ -16,7 +16,7 @@ module Messages
     # "Globals" for the server.
     @redis = Redis.new(host: REDIS_HOST, port: REDIS_PORT)
     @middleman = MiddleMan.new
-    @addresses = @middleman.start
+    @middleman.start
 
     # Routes.
 
@@ -56,9 +56,10 @@ module Messages
       begin
         # Get endpoint doesn't accept attachments, so make sure none were sent.
         raise BadRequestError, 'This endpoint does not accept attachments. Please use POST.' if params['attachment'].exists?
+        raise BadRequestError, 'You must provide a message to send.' unless params['message'].exists?
 
         # User didn't send us an attachment. Hooray.
-        internal_send_message(params['to'], params['from'], params['message'], nil, params['token'])
+        internal_send_message(params['to'], params['message'], nil, params['token'])
       rescue BadRequestError => error
         halt 400, {
           code: 'bad_request',
@@ -82,7 +83,7 @@ module Messages
       begin
         # Internal method only exists to allow the get endpoint to enforce some special logic,
         # so just go ahead and actually do the work.
-        internal_send_message(params['to'], params['from'], params['message'], params['attachment'], params['token'])
+        internal_send_message(params['to'], params['message'], params['attachment'], params['token'])
       rescue BadRequestError => error
         halt 400, {
           code: 'bad_request',
@@ -105,20 +106,18 @@ module Messages
     private
 
     # Gets called by both get and post handlers for /send_message route.
-    def internal_send_message(to, from, message, attachment, token)
+    def internal_send_message(to, message, attachment, token)
       raise UnauthorizedError, 'Token not provided.' unless token.exists?
       raise UnauthorizedError, 'Provided token is invalid.' unless @redis.sismember('messages.tokens', token)
-      raise BadRequestError, 'Missing either message, to, or from parameter.' unless message.exists? && to.exists? && from.exists?
+      raise BadRequestError, 'Missing recipient.' unless to.exists?
 
       # Validate arguments.
       valid = /\+?[0-9]{0,2}(-|\.|\ )?\(?[0-9]{3}\)?(-|\.)?[0-9]{3}(-|\.)?[0-9]{4}/
       raise BadRequestError, 'The provided recipient is not a valid phone number.' unless to =~ valid
-      raise BadRequestError, 'Cannot send from the requested address.' unless @addresses.include?(from)
 
       # Create message.
       message = {
         to: to,
-        from: from,
         message: message
       }
 
